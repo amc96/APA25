@@ -1,0 +1,11 @@
+flask
+pandas
+matplotlib
+networkx
+matplotlib
+numpy
+pandas
+flask
+numpy
+pandas
+werkzeug

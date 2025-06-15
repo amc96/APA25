@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor CSV para Matriz</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+        .upload-box {
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            background-color: #f8f9fa;
+        }
+        .upload-box:hover {
+            border-color: #0d6efd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="text-center mb-4">Conversor CSV para Matriz</h1>
+                
+                <!-- Mensagens de alerta -->
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert {% if upload_status == 'sucesso' %}alert-success{% else %}alert-danger{% endif %} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                
+                <!-- Formulário de upload -->
+                <div class="upload-box">
+                    <form method="POST" enctype="multipart/form-data">
+                        <h4>Carregar arquivo CSV</h4>
+                        <p class="text-muted">Selecione um arquivo CSV com colunas Animal_1, Animal_2 e Coef</p>
+                        
+                        <!-- Exemplo da estrutura do arquivo esperado -->
+                        <div class="alert alert-info mb-3">
+                            <p class="mb-1"><strong>Formato esperado do CSV:</strong></p>
+                            <small>
+                                <code>Animal_1,Animal_2,Coef</code><br>
+                                <code>Vaca1,Vaca2,0.0</code><br>
+                                <code>Vaca1,Vaca3,0.125</code><br>
+                                <code>...</code>
+                            </small>
+                        </div>
+                        
+                        <!-- Campo de upload mais intuitivo -->
+                        <div class="mb-3">
+                            <label for="arquivo" class="form-label">Selecione o arquivo CSV:</label>
+                            <input class="form-control" type="file" id="arquivo" name="arquivo" accept=".csv" required>
+                            <div class="form-text">Apenas arquivos CSV são aceitos. Tamanho máximo: 5MB.</div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-upload me-1" viewBox="0 0 16 16">
+                                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                                <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                            </svg>
+                            Enviar e Converter
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Resultados (só aparece quando o upload for bem-sucedido) -->
+                {% if upload_status == 'sucesso' %}
+                    <div class="card mb-4 border-success">
+                        <div class="card-header bg-success text-white">
+                            <h4><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-check-circle me-2" viewBox="0 0 16 16">
+                              <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                              <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                            </svg> Conversão concluída com sucesso!</h4>
+                        </div>
+                        
+                        <div class="card-body">
+                            <!-- Menu de navegação para resultados -->
+                            <ul class="nav nav-tabs mb-4" id="resultTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="statistics-tab" data-bs-toggle="tab" data-bs-target="#statistics" type="button" role="tab" aria-controls="statistics" aria-selected="true">Estatísticas</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="animals-tab" data-bs-toggle="tab" data-bs-target="#animals" type="button" role="tab" aria-controls="animals" aria-selected="false">Animais</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="actions-tab" data-bs-toggle="tab" data-bs-target="#actions" type="button" role="tab" aria-controls="actions" aria-selected="false">Ações</button>
+                                </li>
+                            </ul>
+                            
+                            <!-- Conteúdo das abas -->
+                            <div class="tab-content" id="resultTabContent">
+                                <!-- Aba de Estatísticas -->
+                                <div class="tab-pane fade show active" id="statistics" role="tabpanel" aria-labelledby="statistics-tab">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h5>Estatísticas da Matriz</h5>
+                                            <div class="table-responsive">
+                                                <table class="table table-striped table-hover">
+                                                    <tbody>
+                                                        <tr>
+                                                            <th style="width: 30%">Dimensões:</th>
+                                                            <td>{{ estatisticas.linhas }} linhas x {{ estatisticas.colunas }} colunas</td>
+                                                        </tr>
+                                                        {% if estatisticas.total_animais is defined %}
+                                                        <tr>
+                                                            <th>Total de animais na matriz:</th>
+                                                            <td>{{ estatisticas.total_animais }}</td>
+                                                        </tr>
+                                                        {% endif %}
+                                                        {% if estatisticas.non_zero_values is defined %}
+                                                        <tr>
+                                                            <th>Valores não zero:</th>
+                                                            <td>{{ estatisticas.non_zero_values }}</td>
+                                                        </tr>
+                                                        {% endif %}
+                                                        {% if estatisticas.avg_coefficient is defined %}
+                                                        <tr>
+                                                            <th>Coeficiente médio:</th>
+                                                            <td>{{ "%.4f"|format(estatisticas.avg_coefficient) }}</td>
+                                                        </tr>
+                                                        {% endif %}
+                                                        {% if estatisticas.max_coefficient is defined %}
+                                                        <tr>
+                                                            <th>Coeficiente máximo:</th>
+                                                            <td>{{ "%.4f"|format(estatisticas.max_coefficient) }}</td>
+                                                        </tr>
+                                                        {% endif %}
+                                                        {% if estatisticas.min_coefficient is defined %}
+                                                        <tr>
+                                                            <th>Coeficiente mínimo:</th>
+                                                            <td>{{ "%.4f"|format(estatisticas.min_coefficient) }}</td>
+                                                        </tr>
+                                                        {% endif %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Aba de Animais -->
+                                <div class="tab-pane fade" id="animals" role="tabpanel" aria-labelledby="animals-tab">
+                                    <div class="row">
+                                        <!-- Exibir contagem de Animal_1 -->
+                                        {% if contagem_animal1 %}
+                                        <div class="col-md-6">
+                                            <div class="card border-info mb-3">
+                                                <div class="card-header bg-info text-white">
+                                                    <h5 class="mb-0">Animal_1</h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <h6><strong>Total de animais distintos:</strong> {{ contagem_animal1["Total de animais distintos"] }}</h6>
+                                                    
+                                                    {% if contagem_animal1["Lista de animais"] %}
+                                                    <hr>
+                                                    <p><strong>Lista de animais:</strong></p>
+                                                    <div class="d-flex flex-wrap gap-1">
+                                                        {% for animal in contagem_animal1["Lista de animais"] %}
+                                                        <span class="badge bg-light text-dark border">{{ animal }}</span>
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <!-- Exibir contagem de Animal_2 -->
+                                        {% if contagem_animal2 %}
+                                        <div class="col-md-6">
+                                            <div class="card border-success mb-3">
+                                                <div class="card-header bg-success text-white">
+                                                    <h5 class="mb-0">Animal_2</h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <h6><strong>Total de animais distintos:</strong> {{ contagem_animal2["Total de animais distintos"] }}</h6>
+                                                    
+                                                    {% if contagem_animal2["Lista de animais"] %}
+                                                    <hr>
+                                                    <p><strong>Lista de animais:</strong></p>
+                                                    <div class="d-flex flex-wrap gap-1">
+                                                        {% for animal in contagem_animal2["Lista de animais"] %}
+                                                        <span class="badge bg-light text-dark border">{{ animal }}</span>
+                                                        {% endfor %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <!-- Aba de Ações -->
+                                <div class="tab-pane fade" id="actions" role="tabpanel" aria-labelledby="actions-tab">
+                                    <div class="d-grid gap-3">
+                                        <div class="card border-primary">
+                                            <div class="card-body">
+                                                <h5 class="card-title">Baixar arquivo da matriz</h5>
+                                                <p class="card-text">Faça o download da matriz completa em formato CSV para uso em outros programas.</p>
+                                                <a href="{{ url_for('download_file', filename=arquivo_matriz) }}" class="btn btn-primary">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download me-1" viewBox="0 0 16 16">
+                                                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                                                        <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+                                                    </svg>
+                                                    Baixar Matriz (CSV)
+                                                </a>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="card border-info">
+                                            <div class="card-body">
+                                                <h5 class="card-title">Visualizar matriz e melhores cruzamentos</h5>
+                                                <p class="card-text">Visualize a matriz e os melhores cruzamentos sugeridos pelo método GRASPE.</p>
+                                                <a href="{{ url_for('visualizar_matriz', filename=arquivo_matriz) }}" class="btn btn-info">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-eye me-1" viewBox="0 0 16 16">
+                                                        <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+                                                        <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+                                                    </svg>
+                                                    Visualizar Matriz
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

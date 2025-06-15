@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizar Matriz</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+        .table-container {
+            overflow-x: auto;
+            max-width: 100%;
+        }
+        .table-striped td {
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="text-center mb-4">Visualização da Matriz</h1>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4>{{ filename }}</h4>
+                            <a href="{{ url_for('index') }}" class="btn btn-primary">Voltar</a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <p class="mb-0">Matriz completa: {{ linhas }} linhas x {{ colunas }} colunas</p>
+                            <p class="mb-0">Exibindo uma amostra de 30x30 para visualização</p>
+                        </div>
+                        
+                        <!-- Exibir contagens de Animal_1 e Animal_2 se disponíveis -->
+                        {% if contagem_animal1 or contagem_animal2 %}
+                            <div class="row mb-4">
+                                {% if contagem_animal1 %}
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header bg-primary text-white">
+                                            <h5 class="mb-0">Contagem de Animal_1</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="alert alert-info">
+                                                <h6><strong>Total de animais distintos:</strong> {{ contagem_animal1["Total de animais distintos"] }}</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                {% if contagem_animal2 %}
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header bg-success text-white">
+                                            <h5 class="mb-0">Contagem de Animal_2</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div class="alert alert-success">
+                                                <h6><strong>Total de animais distintos:</strong> {{ contagem_animal2["Total de animais distintos"] }}</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="table-container">
+                            {{ matriz|safe }}
+                        </div>
+                        
+                        <div class="d-flex justify-content-center mt-3">
+                            <a href="{{ url_for('download_file', filename=filename) }}" class="btn btn-success">
+                                <i class="bi bi-download"></i> Baixar Matriz Completa (CSV)
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Exibir melhores cruzamentos (método GRASPE) -->
+                <!-- Adicionando debug para verificar se os melhores cruzamentos estão disponíveis -->
+                <div class="card mt-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h4>Melhores Combinações de Cruzamento (Método GRASPE)</h4>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">Combinações ordenadas priorizando coeficiente 0, depois valores crescentes. 
+                           Valores -1 são descartados.</p>
+                        
+                        {% if melhores_cruzamentos and melhores_cruzamentos|length > 0 %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Animal 1</th>
+                                        <th>Animal 2</th>
+                                        <th>Coeficiente</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for comb in melhores_cruzamentos %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td>{{ comb.Animal_1 }}</td>
+                                        <td>{{ comb.Animal_2 }}</td>
+                                        <td class="text-end">
+                                            {% if comb.Coeficiente == 0 %}
+                                                <span class="badge bg-success">{{ "%.4f"|format(comb.Coeficiente) }}</span>
+                                            {% elif comb.Coeficiente <= 0.25 %}
+                                                <span class="badge bg-info">{{ "%.4f"|format(comb.Coeficiente) }}</span>
+                                            {% elif comb.Coeficiente <= 0.5 %}
+                                                <span class="badge bg-warning">{{ "%.4f"|format(comb.Coeficiente) }}</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">{{ "%.4f"|format(comb.Coeficiente) }}</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            Nenhuma combinação de cruzamento encontrada. A matriz pode estar vazia ou conter apenas valores de descarte (-1).
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
