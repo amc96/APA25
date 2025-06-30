@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultado Análise GRASPE</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+        }
+        .table-container {
+            overflow-x: auto;
+            max-width: 100%;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .best-solution-card {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+        .quality-excellent { color: #28a745; font-weight: bold; }
+        .quality-good { color: #17a2b8; font-weight: bold; }
+        .quality-regular { color: #ffc107; font-weight: bold; }
+        .quality-caution { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid px-4">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="text-center mb-4">
+                    <i class="bi bi-graph-up"></i> Resultado da Análise GRASPE
+                </h1>
+                
+                <!-- Botões de navegação -->
+                <div class="d-flex justify-content-between mb-4">
+                    <a href="{{ url_for('index') }}" class="btn btn-primary">
+                        <i class="bi bi-arrow-left"></i> Voltar ao Início
+                    </a>
+                    <a href="{{ url_for('download_cruzamentos_csv') }}" class="btn btn-success">
+                        <i class="bi bi-download"></i> Baixar Resultados CSV
+                    </a>
+                </div>
+
+                <!-- Informações Gerais -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Execuções Realizadas</h5>
+                                <h2 class="card-text">{{ num_execucoes }}</h2>
+                                <small>Parâmetros aleatórios</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Matriz Analisada</h5>
+                                <h2 class="card-text">{{ linhas }}×{{ colunas }}</h2>
+                                <small>{{ filename }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Cruzamentos Encontrados</h5>
+                                <h2 class="card-text">{{ melhores_cruzamentos|length }}</h2>
+                                <small>Na melhor solução</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estatísticas das Múltiplas Execuções -->
+                <div class="card mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h4 class="mb-0"><i class="bi bi-bar-chart"></i> Estatísticas Gerais</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="text-center p-3 border rounded">
+                                    <h5>Média das Médias</h5>
+                                    <h3 class="text-primary">{{ "%.6f"|format(estatisticas_multiplas.media_das_medias) }}</h3>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3 border rounded">
+                                    <h5>Melhor Média</h5>
+                                    <h3 class="text-success">{{ "%.6f"|format(estatisticas_multiplas.melhor_media) }}</h3>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3 border rounded">
+                                    <h5>Pior Média</h5>
+                                    <h3 class="text-warning">{{ "%.6f"|format(estatisticas_multiplas.pior_media) }}</h3>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center p-3 border rounded">
+                                    <h5>Valor Objetivo</h5>
+                                    <h3 class="text-info">{{ "%.6f"|format(melhor_solucao.valor_objetivo) }}</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráfico das Médias de Todas as Execuções -->
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0"><i class="bi bi-graph-up"></i> Gráfico das Médias por Execução</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="mediasChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Melhor Solução Encontrada -->
+                <div class="card mb-4 best-solution-card">
+                    <div class="card-header">
+                        <h4 class="mb-0"><i class="bi bi-trophy"></i> Melhor Solução Encontrada</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5>Informações da Melhor Solução:</h5>
+                                <ul class="list-unstyled">
+                                    <li><strong>Execução:</strong> {{ melhor_solucao.execucao }}</li>
+                                    <li><strong>Total de Cruzamentos:</strong> {{ melhor_solucao.total_cruzamentos }}</li>
+                                    <li><strong>Média dos Coeficientes:</strong> {{ "%.6f"|format(melhor_solucao.media_coeficientes) }}</li>
+                                    <li><strong>Valor Objetivo:</strong> {{ "%.6f"|format(melhor_solucao.valor_objetivo) }}</li>
+                                    <li><strong>Parâmetros Usados:</strong> {{ melhor_solucao.parametros.iteracoes }} iterações, RCL {{ melhor_solucao.parametros.rcl_tamanho }}</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h5>Classificação da Qualidade:</h5>
+                                {% set media = melhor_solucao.media_coeficientes %}
+                                {% if media <= 0.05 %}
+                                    <h3 class="quality-excellent">EXCELENTE</h3>
+                                    <p>Média muito baixa - Excelente qualidade dos cruzamentos</p>
+                                {% elif media <= 0.1 %}
+                                    <h3 class="quality-good">BOA</h3>
+                                    <p>Média baixa - Boa qualidade dos cruzamentos</p>
+                                {% elif media <= 0.2 %}
+                                    <h3 class="quality-regular">REGULAR</h3>
+                                    <p>Média moderada - Qualidade regular dos cruzamentos</p>
+                                {% else %}
+                                    <h3 class="quality-caution">CUIDADO</h3>
+                                    <p>Média alta - Revisar cruzamentos sugeridos</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detalhes dos Melhores Cruzamentos -->
+                <div class="card mb-4">
+                    <div class="card-header bg-warning text-dark">
+                        <h4 class="mb-0"><i class="bi bi-list-stars"></i> Detalhes dos Melhores Cruzamentos</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Animal 1</th>
+                                        <th>Animal 2</th>
+                                        <th>Coeficiente</th>
+                                        <th>Qualidade</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for cruzamento in melhores_cruzamentos[:20] %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td><strong>{{ cruzamento.Animal_1 }}</strong></td>
+                                        <td><strong>{{ cruzamento.Animal_2 }}</strong></td>
+                                        <td>{{ "%.6f"|format(cruzamento.Coeficiente) }}</td>
+                                        <td>
+                                            {% if cruzamento.Coeficiente <= 0.05 %}
+                                                <span class="quality-excellent">EXCELENTE</span>
+                                            {% elif cruzamento.Coeficiente <= 0.1 %}
+                                                <span class="quality-good">BOA</span>
+                                            {% elif cruzamento.Coeficiente <= 0.2 %}
+                                                <span class="quality-regular">REGULAR</span>
+                                            {% else %}
+                                                <span class="quality-caution">CUIDADO</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% if melhores_cruzamentos|length > 20 %}
+                                <p class="text-muted text-center">
+                                    Mostrando os 20 melhores cruzamentos de {{ melhores_cruzamentos|length }} encontrados.
+                                    <a href="{{ url_for('download_cruzamentos_csv') }}" class="btn btn-sm btn-outline-primary">
+                                        Baixar lista completa
+                                    </a>
+                                </p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Amostra da Matriz (menor) -->
+                <div class="card mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h4 class="mb-0"><i class="bi bi-table"></i> Amostra da Matriz (10x10)</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container">
+                            {{ matriz|safe }}
+                        </div>
+                        <p class="text-muted text-center mt-3">
+                            Matriz completa: {{ linhas }} × {{ colunas }} elementos
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Gráfico das médias de todas as execuções
+        const ctx = document.getElementById('mediasChart').getContext('2d');
+        const mediasChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [{% for exec in todas_execucoes %}'Exec {{ exec.execucao }}'{% if not loop.last %},{% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Média dos Coeficientes',
+                    data: {{ estatisticas_multiplas.todas_medias }},
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Média dos Coeficientes'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Execuções'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Evolução das Médias por Execução GRASPE'
+                    },
+                    legend: {
+                        display: true
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
