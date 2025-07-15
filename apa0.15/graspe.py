@@ -70,7 +70,14 @@ def busca_local(solucao, matriz):
 def grasp_cruzamentos(matriz, iteracoes=50, rcl_tamanho=3):
     """
     Algoritmo GRASP para encontrar os melhores cruzamentos
-    Retorna dict com solução e estatísticas
+    
+    Args:
+        matriz: DataFrame com a matriz de relacionamentos
+        iteracoes: Número de iterações do GRASP (padrão: 50)
+        rcl_tamanho: Tamanho da lista de candidatos restritos (padrão: 3)
+    
+    Returns:
+        dict: Dicionário com solução e estatísticas
     """
     melhor_solucao = None
     melhor_valor = float('inf')
@@ -117,18 +124,18 @@ def grasp_multiplas_execucoes(matriz, num_execucoes=10):
     
     for execucao in range(num_execucoes):
         # Parâmetros aleatórios para variação na metaheurística GRASP
-        iteracoes_aleatorio = random.randint(30, 100)  # Variação no número de iterações
-        rcl_tamanho_aleatorio = random.randint(2, 6)   # Variação no tamanho da RCL
-        
-        print(f"Execução {execucao + 1}/{num_execucoes} - Iterações: {iteracoes_aleatorio}, RCL: {rcl_tamanho_aleatorio}")
+        n_colunas = len(matriz.columns) if hasattr(matriz, 'columns') else len(matriz[0])
+        rcl_tamanho_aleatorio = random.randint(2, 10)   # Variação no tamanho da RCL
+        print(f"Execução {execucao + 1}/{num_execucoes} - Iterações: {n_colunas}, RCL: {rcl_tamanho_aleatorio}")
         
         # Executar GRASP com parâmetros aleatórios
-        resultado = grasp_cruzamentos(matriz, iteracoes_aleatorio, rcl_tamanho_aleatorio)
+        
+        resultado = grasp_cruzamentos(matriz, n_colunas, rcl_tamanho_aleatorio)
         
         # Adicionar informações da execução
         resultado['execucao'] = execucao + 1
         resultado['parametros'] = {
-            'iteracoes': iteracoes_aleatorio,
+            'iteracoes': n_colunas,
             'rcl_tamanho': rcl_tamanho_aleatorio
         }
         
